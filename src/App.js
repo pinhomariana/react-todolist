@@ -1,112 +1,79 @@
-import logo from './logo.svg';
 import './App.css';
-import { useState } from 'react';
-import {v4 as uuidv4} from 'uuid';
+import { useState, useReducer } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import AddTodo from './AddTodo';
+import TodoList from './TodoList';
 
 
+function tasksReducer(tasks, action) {
+  switch (action.type) {
+    case 'ADD_TODO':
+      return [
+        ...tasks,
+        {
+          id: uuidv4(),
+          text: action.newTask,
+          completed: false,
+        },
+      ];
+    case 'TOGGLE_TODO':
+      return tasks.map((task) => {
+        if (task.id === action.id) {
+          return { ...task, completed: action.completed };
+        }
+        return task;
+      });
+    case 'SAVE_TODO':
+      return tasks.map((task) => {
+        if (task.id === action.id) {
+          return { ...task, text: action.newText };
+        }
+        return task;
+      });
+    case 'DELETE_TODO':
+      return tasks.filter((task) => task.id !== action.id);
+    case 'DELETE_ALL':
+      return [];
+    default:
+      return tasks;
+  }
+}
 
 function App() {
-  const [tasks, setTasks] = useState([]);
+  const [tasks, dispatch] = useReducer(tasksReducer, []);
   const [newTask, setNewTask] = useState('');
   const [editingTaskId, setEditingTaskId] = useState(null);
+
 
   function handleEdit(id) {
     setEditingTaskId(id);
   }
 
   function handleSave(id, newText) {
-    setTasks(currentTasks => {
-      return currentTasks.map(task => {
-        if (task.id === id) {
-          return { ...task, text: newText };
-        }
-        return task;
-      });
+    dispatch({ 
+      type: 'SAVE_TODO', 
+      id, 
+      newText 
     });
     setEditingTaskId(null);
   }
 
-  function handleSubmit(e) {
-    e.preventDefault()
-
-    if (newTask.length == 0) {
-      return;
-    }
-
-    setTasks(currentTasks => {
-      return [
-        ...tasks,
-        { id: uuidv4(), text: newTask, completed: false}
-      ]
-    })
-    setNewTask("");
-  }
-
-  function toggleTask(id, completed) {
-    setTasks(currentTasks => {
-      return currentTasks.map(task => {
-        if (task.id === id) {
-          return {...task, completed}
-        }
-        return task
-      })
-    })
-  }
-
-  function deletTask(id) {
-    setTasks(currentTasks => {
-      return currentTasks.filter(task => task.id != id)
-    })
-  }
-
   function deleteAll() {
-    setTasks(currentTasks => {
-      return []
-    })
+    dispatch({ 
+      type: 'DELETE_ALL' 
+    });
   }
 
   return (
     <div>
-      <form onSubmit={handleSubmit}>
-        <input
-        type='text'
-        value={newTask}
-          onChange={(e) => setNewTask(e.target.value)}
-        />
-        <button>Add Task</button>
-      </form>
-      <ul>
-  {tasks.map((task) => (
-    <li key={task.id}>
-      <input 
-        type='checkbox' 
-        checked={task.completed} 
-        onChange={e => toggleTask(task.id, e.target.checked)}
+      <AddTodo dispatch={dispatch} newTask={newTask} setNewTask={setNewTask}/>
+      <TodoList
+        tasks={tasks}
+        dispatch={dispatch}
+        editingTaskId={editingTaskId}
+        handleEdit={handleEdit}
+        handleSave={handleSave}
       />
-      {editingTaskId === task.id ? (
-        <input 
-          type="text" 
-          value={task.text} 
-          onChange={(e) => {
-            setTasks(currentTasks => 
-              currentTasks.map(t => 
-                t.id === task.id ? {...t, text: e.target.value} : t
-              )
-            );
-          }} 
-        />
-      ) : (
-        task.text
-      )}
-      {editingTaskId === task.id ? (
-        <button onClick={() => handleSave(task.id, task.text)}>Save</button>
-      ) : (
-        <button onClick={() => handleEdit(task.id)}>Edit</button>
-      )}
-      <button onClick={() => deletTask(task.id)}>Delete</button>
-    </li>
-  ))}
-</ul>
       <button onClick={deleteAll}>Delete All</button>
     </div>
   );
